@@ -59,9 +59,16 @@ void UKF::GenerateSigmaPoints(MatrixXd* Xsig_out) {
   // calculate sigma points ...
   // calculate 11 sigma points and fill the columns of Xsig with sigma points
   // make sure use the sme ordering of sigma points as showed in the video to make sure the evaluation works
-
+  
+  // set first column of sigma point matrix
+  Xsig.col(0) = x;
 
   // set sigma points as columns of matrix Xsig
+  // set remaining sigma points
+  for (int i = 0; i < n_x; ++i) {
+    Xsig.col(i+1)     = x + sqrt(lambda+n_x) * A.col(i);
+    Xsig.col(i+1+n_x) = x - sqrt(lambda+n_x) * A.col(i);
+  }
 
   /**
    * Student part end
