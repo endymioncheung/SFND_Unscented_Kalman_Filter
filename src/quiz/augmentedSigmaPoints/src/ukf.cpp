@@ -68,13 +68,35 @@ void UKF::AugmentedSigmaPoints(MatrixXd* Xsig_out) {
    */
  
   // create augmented mean state
+  x_aug.head(5) = x; // set first 5 elements of augmented state as original state
+  x_aug(5) = 0;      // v_a
+  x_aug(6) = 0;      // v_psi_ddot
 
   // create augmented covariance matrix
+  // P_(a,k|k) = [P_k|k 0]
+  //             [  0   Q]               
+  P_aug.fill(0.0);
+  P_aug.topLeftCorner(5,5) = P;
 
-  // create square root matrix
+  // Set process noise covariance matrix, Q
+  // Q = [std_a*std_a           0          ]
+  //     [     0      std_yawdd * std_yawdd]
+  P_aug(5,5) = std_a * std_a;
+  P_aug(6,6) = std_yawdd * std_yawdd;
+
+  // create square root matrix of P_aug
+  // squre root matrix of the covariance matrix P_aug
+  // by Cholesky decomposition and taking lower matrix
+  // https://en.wikipedia.org/wiki/Cholesky_decomposition
+  MatrixXd P_k_k = P_aug.llt().matrixL();
 
   // create augmented sigma points
-  
+  Xsig_aug.col(0)  = x_aug;
+  for (int i = 0; i< n_aug; ++i) {
+    Xsig_aug.col(i+1)       = x_aug + sqrt(lambda+n_aug) * P_k_k.col(i);
+    Xsig_aug.col(i+1+n_aug) = x_aug - sqrt(lambda+n_aug) * P_k_k.col(i);
+  }
+
   /**
    * Student part end
    */

@@ -4,8 +4,6 @@
 
 using Eigen::MatrixXd;
 
-using Eigen::MatrixXd;
-
 int main() {
 
   // Create a UKF instance
