@@ -34,12 +34,11 @@ void UKF::UpdateState(VectorXd* x_out, MatrixXd* P_out) {
   double lambda = 3 - n_aug;
 
   // set vector for weights
-  VectorXd weights = VectorXd(2*n_aug+1);
-  double weight_0 = lambda/(lambda+n_aug);
-  double weight = 0.5/(lambda+n_aug);
-  weights(0) = weight_0;
+  VectorXd weights = VectorXd (2*n_aug + 1);
+  double weight    = 0.5/(lambda+n_aug);
+  weights(0)       = lambda/(lambda+n_aug);;
 
-  for (int i=1; i<2*n_aug+1; ++i) {  
+  for (int i=1; i< 2*n_aug + 1; ++i) {  
     weights(i) = weight;
   }
 
@@ -94,9 +93,9 @@ void UKF::UpdateState(VectorXd* x_out, MatrixXd* P_out) {
   // create example vector for incoming radar measurement
   VectorXd z = VectorXd(n_z);
   z <<
-     5.9214,   // rho in m
-     0.2187,   // phi in rad
-     2.0062;   // rho_dot in m/s
+     5.9214,   // radial distance,  rho in [m]
+     0.2187,   // bearing,          phi in [rad]
+     2.0062;   // radial velocity,  rho_dot in [m/s]
 
   // create matrix for cross correlation Tc
   MatrixXd Tc = MatrixXd(n_x, n_z);
@@ -106,10 +105,43 @@ void UKF::UpdateState(VectorXd* x_out, MatrixXd* P_out) {
    */
 
   // calculate cross correlation matrix
+  // between sigma points in state space and
+  // measurement space
+  Tc.fill(0.0);
+  for (int i = 0; i < 2 * n_aug + 1; ++i) // 2n+1 simga points
+  {
+    /* state difference of sigma points
+       = predicted sigma points in state space        - mean predicted state        */
+    VectorXd x_diff = Xsig_pred.col(i) - x;
+    // angle normalization for yaw angle, psi in [rad]
+    while (x_diff(3) > M_PI)  x_diff(3) -= 2.*M_PI;
+    while (x_diff(3) < -M_PI) x_diff(3) += 2.*M_PI;
+
+    /* residual difference of sigma points
+       = measurement sigma points in measurement space - mean predicted measurement */
+    VectorXd z_diff = Zsig.col(i) - z_pred;
+    // angle normalization in radial angle, phi in [rad] 
+    while (z_diff(1)>  M_PI) z_diff(1) -= 2.*M_PI;
+    while (z_diff(1)< -M_PI) z_diff(1) += 2.*M_PI;
+
+    Tc += weights(i) * x_diff * z_diff.transpose();
+  }
 
   // calculate Kalman gain K;
+  MatrixXd K = Tc * S.inverse();
 
   // update state mean and covariance matrix
+  
+  /* measurement residual difference
+     = incoming radar measurement - mean predicted measurement */
+  VectorXd z_diff = z - z_pred;
+  // angle normalization
+  while (z_diff(1) > M_PI)  z_diff(1) -= 2.*M_PI;
+  while (z_diff(1) < -M_PI) z_diff(1) += 2.*M_PI;
+
+  // update state mean and covariance matrix
+  x = x + K * z_diff;             // state
+  P = P - K * S * K.transpose();  // covariance matrix
 
   /**
    * Student part end

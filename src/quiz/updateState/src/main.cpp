@@ -13,7 +13,11 @@ int main() {
   /**
    * Programming assignment calls
    */
+
+  // state, x
   VectorXd x_out = VectorXd(5);
+
+  // covariance matrix, P
   MatrixXd P_out = MatrixXd(5, 5);
   ukf.UpdateState(&x_out, &P_out);
 
