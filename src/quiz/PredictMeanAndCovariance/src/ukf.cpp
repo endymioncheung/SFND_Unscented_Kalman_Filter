@@ -4,9 +4,6 @@
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
 
-using Eigen::MatrixXd;
-using Eigen::VectorXd;
-
 UKF::UKF() {
   Init();
 }
@@ -59,10 +56,31 @@ void UKF::PredictMeanAndCovariance(VectorXd* x_out, MatrixXd* P_out) {
    */
 
   // set weights
+  const double weight_0 = lambda / (lambda+n_aug);
+  weights(0) = weight_0;
+  for (int i=1; i< 2 * n_aug + 1; ++i) {  // 2n+1 weights
+    double weight = 0.5/(lambda+n_aug);
+    weights(i) = weight;
+  }
 
   // predict state mean
+ x.fill(0.0);
+  for (int i = 0; i < 2 * n_aug + 1; ++i) {  // iterate over sigma points
+    x+= weights(i) * Xsig_pred.col(i);
+  }
 
   // predict state covariance matrix
+  P.fill(0.0);
+  for (int i = 0; i < 2 * n_aug + 1; ++i) {  // iterate over sigma points
+    // state difference
+    VectorXd x_diff = Xsig_pred.col(i) - x;
+
+    // angle normalization
+    while (x_diff(3)> M_PI) x_diff(3) -= 2.*M_PI;
+    while (x_diff(3)<-M_PI) x_diff(3) += 2.*M_PI;
+
+    P +=  weights(i) * x_diff * x_diff.transpose() ;
+  }
 
   /**
    * Student part end

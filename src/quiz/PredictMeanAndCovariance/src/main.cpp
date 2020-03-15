@@ -13,8 +13,12 @@ int main() {
   /**
    * Programming assignment calls
    */
+  
+  // sigma point generation
   VectorXd x_pred = VectorXd(5);
+  // predicted covariance
   MatrixXd P_pred = MatrixXd(5, 5);
+
   ukf.PredictMeanAndCovariance(&x_pred, &P_pred);
 
   return 0;
