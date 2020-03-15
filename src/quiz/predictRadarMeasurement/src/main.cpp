@@ -12,8 +12,12 @@ int main() {
 
   /**
    * Programming assignment calls
-   */  
+   */ 
+
+  // predicted measurement mean, z_out
   VectorXd z_out = VectorXd(3);
+
+  // predicted measurement covariance matrix, S_out
   MatrixXd S_out = MatrixXd(3, 3);
   ukf.PredictRadarMeasurement(&z_out, &S_out);
 
