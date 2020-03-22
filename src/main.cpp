@@ -7,37 +7,40 @@
 
 int main(int argc, char** argv)
 {
-
+	// Initalize poitn cloud viewer
 	pcl::visualization::PCLVisualizer::Ptr viewer(new pcl::visualization::PCLVisualizer("3D Viewer"));
+	// Set background to black
 	viewer->setBackgroundColor(0, 0, 0);
 
-	// set camera position and angle
+	// Set camera position and angle
 	viewer->initCameraParameters();
 	float x_pos = 0;
 	viewer->setCameraPosition ( x_pos-26, 0, 15.0, x_pos+25, 0, 0, 0, 0, 1);
 
 	Highway highway(viewer);
 
-	//initHighway(viewer);
+	// initHighway(viewer);
 
 	int frame_per_sec = 30;
 	int sec_interval = 10;
 	int frame_count = 0;
-	int time_us = 0;
+	int time_us = 0; // microseconds
 
 	double egoVelocity = 25;
 
+	// Update video frame for given time internal
 	while (frame_count < (frame_per_sec*sec_interval))
 	{
+		// Clear all previous rendering in the last frame
 		viewer->removeAllPointClouds();
 		viewer->removeAllShapes();
 
-		//stepHighway(egoVelocity,time_us, frame_per_sec, viewer);
+		// stepHighway(egoVelocity,time_us, frame_per_sec, viewer);
 		highway.stepHighway(egoVelocity,time_us, frame_per_sec, viewer);
-		viewer->spinOnce(1000/frame_per_sec);
+		viewer->spinOnce(1000/frame_per_sec); // visualize loop in [ms]
+
 		frame_count++;
 		time_us = 1000000*frame_count/frame_per_sec;
-		
 	}
 
 }

@@ -9,6 +9,7 @@ using Eigen::MatrixXd;
 using Eigen::VectorXd;
 using namespace std;
 
+// Lidar marker
 struct lmarker
 {
 	double x, y;
@@ -18,6 +19,7 @@ struct lmarker
 
 };
 
+// Radar marker
 struct rmarker
 {
 	double rho, phi, rho_dot;
@@ -47,6 +49,7 @@ class Tools {
 	lmarker lidarSense(Car& car, pcl::visualization::PCLVisualizer::Ptr& viewer, long long timestamp, bool visualize);
 	rmarker radarSense(Car& car, Car ego, pcl::visualization::PCLVisualizer::Ptr& viewer, long long timestamp, bool visualize);
 	void ukfResults(Car car, pcl::visualization::PCLVisualizer::Ptr& viewer, double time, int steps);
+	
 	/**
 	* A helper method to calculate RMSE.
 	*/

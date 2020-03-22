@@ -21,6 +21,7 @@ public:
 	// --------------------------------
 	// Set which cars to track with UKF
 	std::vector<bool> trackCars = {true,true,true};
+
 	// Visualize sensor measurements
 	bool visualize_lidar = true;
 	bool visualize_radar = true;
@@ -34,11 +35,12 @@ public:
 	{
 
 		tools = Tools();
-	
+		
+		// Create ego car
 		egoCar = Car(Vect3(0, 0, 0), Vect3(4, 2, 2), Color(0, 1, 0), 0, 0, 2, "egoCar");
 		
+		// Create first non-ego car and the driving behavior
 		Car car1(Vect3(-10, 4, 0), Vect3(4, 2, 2), Color(0, 0, 1), 5, 0, 2, "car1");
-		
 		std::vector<accuation> car1_instructions;
 		accuation a = accuation(0.5*1e6, 0.5, 0.0);
 		car1_instructions.push_back(a);
@@ -57,6 +59,7 @@ public:
 		}
 		traffic.push_back(car1);
 		
+		// Create second non-ego car and the driving behavior
 		Car car2(Vect3(25, -4, 0), Vect3(4, 2, 2), Color(0, 0, 1), -6, 0, 2, "car2");
 		std::vector<accuation> car2_instructions;
 		a = accuation(4.0*1e6, 3.0, 0.0);
@@ -71,6 +74,7 @@ public:
 		}
 		traffic.push_back(car2);
 	
+		// Create third non-ego car and the driving behavior
 		Car car3(Vect3(-12, 0, 0), Vect3(4, 2, 2), Color(0, 0, 1), 1, 0, 2, "car3");
 		std::vector<accuation> car3_instructions;
 		a = accuation(0.5*1e6, 2.0, 1.0);
@@ -132,7 +136,7 @@ public:
 				tools.ground_truth.push_back(gt);
 				tools.lidarSense(traffic[i], viewer, timestamp, visualize_lidar);
 				tools.radarSense(traffic[i], egoCar, viewer, timestamp, visualize_radar);
-				tools.ukfResults(traffic[i],viewer, projectedTime, projectedSteps);
+				tools.ukfResults(traffic[i], viewer, projectedTime, projectedSteps);
 				VectorXd estimate(4);
 				double v  = traffic[i].ukf.x_(2);
     			double yaw = traffic[i].ukf.x_(3);
@@ -150,6 +154,7 @@ public:
 		viewer->addText("Vx: "	+std::to_string(rmse[2]), 30, 225, 20, 1, 1, 1, "rmse_vx");
 		viewer->addText("Vy: "	+std::to_string(rmse[3]), 30, 200, 20, 1, 1, 1, "rmse_vy");
 
+		// Check RMSE after one sec
 		if(timestamp > 1.0e6)
 		{
 
