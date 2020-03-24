@@ -50,6 +50,9 @@ class UKF {
   void PredictRadarMeasurement(Eigen::MatrixXd &Xsig_pred, Eigen::MatrixXd &Z_radar_sig, Eigen::VectorXd &z_pred, Eigen::MatrixXd &S);
   void UpdateRadarState(Eigen::VectorXd &z_radar, Eigen::VectorXd &x, Eigen::MatrixXd &P, Eigen::MatrixXd &NIS_radar);
 
+  void PredictLidarMeasurement(Eigen::MatrixXd &Xsig_pred, Eigen::MatrixXd &Z_lidar_sig, Eigen::VectorXd &z_pred, Eigen::MatrixXd &S);
+  void UpdateLidarState(Eigen::VectorXd &z_lidar, Eigen::VectorXd &x, Eigen::MatrixXd &P, Eigen::MatrixXd &NIS_lidar);
+
   // if this is false, laser measurements will be ignored (except for init)
   bool use_laser_;
 
@@ -119,6 +122,10 @@ class UKF {
   // Weights of sigma points vector for sigma point
   Eigen::VectorXd weights_;
 
+  /****************************************
+  | Radar measurement update attributes  *|
+  ****************************************/
+
   // Measurement dimension, radar can measure r, phi, and r_dot
   int n_radar_z_;
   
@@ -139,6 +146,31 @@ class UKF {
 
   // Radar NIS (Normalized innovation squared)
   Eigen::MatrixXd NIS_radar_;
+
+  /****************************************
+  | Lidar measurement update attributes  *|
+  ****************************************/
+
+  // Measurement dimension, lidar can measure x, y
+  int n_lidar_z_;
+
+  // Predicted lidar measurement mean
+  Eigen::VectorXd z_lidar_pred_;
+
+  // Predicted lidar measurement covariance matrix
+  Eigen::MatrixXd S_lidar_;
+
+  // Lidar measurement noise covariance matrix
+  Eigen::MatrixXd R_lidar_;
+
+  // Lidar sigma points matrix in measurement space
+  Eigen::MatrixXd Z_lidar_sig_;
+
+  // Lidar cross correlation matrix
+  Eigen::MatrixXd Tc_lidar_;
+
+  // Lidar NIS (Normalized innovation squared)
+  Eigen::MatrixXd NIS_lidar_;
 };
 
 #endif  // UKF_H

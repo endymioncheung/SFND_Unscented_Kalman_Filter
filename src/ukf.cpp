@@ -97,6 +97,10 @@ UKF::UKF() {
     weights_(i) = 0.5 / (lambda_aug + n_aug_);
   }
 
+  /****************************************
+  | Radar measurement update attributes  *|
+  ****************************************/
+
   // Radar Measurement dimension: radar can measure r, phi, and r_dot
   n_radar_z_ = 3;
 
@@ -117,6 +121,30 @@ UKF::UKF() {
 
   // Radar cross correlation matrix
   Tc_radar_ = MatrixXd(n_x_, n_radar_z_);
+
+  /****************************************
+  | Lidar measurement update attributes  *|
+  ****************************************/
+  
+  // Lidar Measurement dimension: lidar can measure x, y
+  n_lidar_z_ = 2;
+
+  // Predicted lidar measurement mean
+  z_lidar_pred_ = VectorXd(n_lidar_z_);
+
+  // Predicted lidar measurement covariance matrix
+  S_lidar_ = MatrixXd(n_lidar_z_,n_lidar_z_);
+
+  // Lidar measurement noise covariance matrix
+  R_lidar_ = MatrixXd(n_lidar_z_,n_lidar_z_);
+  R_lidar_ <<  std_laspx_*std_laspx_,                     0,
+                                   0, std_laspy_*std_laspy_;
+
+  // Lidar sigma points matrix in measurement space
+  Z_lidar_sig_ = MatrixXd(n_lidar_z_, n_aug_sig_);
+
+  // Lidar cross correlation matrix
+  Tc_lidar_ = MatrixXd(n_x_, n_lidar_z_);
 }
 
 // UKF destructor
@@ -180,8 +208,8 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
   Prediction(delta_t);
 
   // 3. Update lidar or radar measurements
-  // // Update lidar measurements if the use_laser_ is enabled
-  // if (use_laser_ && meas_package.sensor_type_ == MeasurementPackage::LASER) UpdateLidar(meas_package);
+  // Update lidar measurements if the use_laser_ is enabled
+  if (use_laser_ && meas_package.sensor_type_ == MeasurementPackage::LASER) UpdateLidar(meas_package);
   // Update radar measurements if the use_radar_ is enabled
   if (use_radar_ && meas_package.sensor_type_ == MeasurementPackage::RADAR) UpdateRadar(meas_package);
 }
@@ -268,7 +296,7 @@ void UKF::AugmentedSigmaPoints(VectorXd &x_aug, MatrixXd &P_aug, MatrixXd &Xsig_
 
 void UKF::SigmaPointPrediction(MatrixXd &Xsig_aug, double delta_t, MatrixXd &Xsig_pred) {
 
-  const float CLOSE_TO_ZERO = 0.001; // tolerance close to zero
+  const float EPS = 0.001; // tolerance close to zero
 
   // Predict sigma points
   for (int i = 0; i < n_aug_sig_; ++i) {
@@ -285,7 +313,7 @@ void UKF::SigmaPointPrediction(MatrixXd &Xsig_aug, double delta_t, MatrixXd &Xsi
     // Predict x and y position of the state values, and
     // avoid division by zero when zero yaw rate (`yaw_dot`)
     double p_x_pred, p_y_pred;
-    if (fabs(yaw_dot) > CLOSE_TO_ZERO) {
+    if (fabs(yaw_dot) > EPS) {
         // predict x and y when yaw rate is not zero
         p_x_pred = p_x + v/yaw_dot * ( sin(yaw + yaw_dot*delta_t) - sin(yaw) );
         p_y_pred = p_y + v/yaw_dot * ( cos(yaw) - cos(yaw+yaw_dot*delta_t) );
@@ -354,9 +382,94 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
    * covariance, P_.
    * You can also calculate the lidar NIS, if desired.
    */
+  
   // 1. Predict lidar measurement and covariance matrix
-  // 2. Update state
-  // 3. Calculate NIS (Normalized innovation squared)
+  PredictLidarMeasurement(Xsig_pred_, Z_lidar_sig_, z_lidar_pred_, S_lidar_);
+
+  // 2. Update state and lidar NIS (Normalized innovation squared)
+  UpdateLidarState(meas_package.raw_measurements_, x_, P_, NIS_lidar_);
+}
+
+void UKF::PredictLidarMeasurement(MatrixXd &Xsig_pred, MatrixXd &Z_lidar_sig, VectorXd &z_pred, MatrixXd &S) {
+
+  // Transform lidar sigma points into measurement space
+  for (int i = 0; i < n_aug_sig_ ; ++i) // 2n+1 simga points
+  { 
+    // Extract predicted sigma values for better readability
+    double p_x = Xsig_pred(0,i);
+    double p_y = Xsig_pred(1,i);
+
+    // Lidar measurement model
+    Z_lidar_sig(0,i) = p_x; // x-position
+    Z_lidar_sig(1,i) = p_y; // y-position
+  }
+
+  // Mean predicted lidar measurement
+  z_pred.fill(0.0);
+  for (int i = 0; i < n_aug_sig_; ++i) {
+    z_pred += weights_(i) * Z_lidar_sig.col(i);
+  }
+
+  // Predict lidar measurement covariance matrix S
+  S.fill(0.0);
+  for (int i = 0; i < n_aug_sig_; ++i)
+  {
+    // Residual
+    VectorXd z_diff = Z_lidar_sig.col(i) - z_pred;
+    S += weights_(i) * z_diff * z_diff.transpose();
+  }
+
+  // Add lidar measurement noise covariance matrix
+  S += R_lidar_;
+
+  // Print result
+  // std::cout << "z_pred: " << std::endl << z_pred << std::endl;
+  // std::cout << "S: " << std::endl << S << std::endl;
+}
+
+void UKF::UpdateLidarState(VectorXd &z_lidar, VectorXd &x, MatrixXd &P, MatrixXd &NIS_lidar) {
+
+  // State difference matrix
+  VectorXd x_diff;
+
+  // Lidar residual difference matrix for intermediate calculation
+  VectorXd z_lidar_diff;
+
+  // Calculate lidar cross correlation matrix 
+  // between sigma points in state space and measurement space
+  Tc_lidar_.fill(0.0);
+  for (int i = 0; i < n_aug_sig_ ; ++i) // 2n+1 simga points
+  {
+    /* State difference of sigma points
+       = predicted sigma points in state space        - mean predicted state        */
+    x_diff = Xsig_pred_.col(i) - x;
+
+    /* Residual difference of sigma points
+       = measurement sigma points in measurement space - mean predicted measurement */
+    z_lidar_diff = Z_lidar_sig_.col(i) - z_lidar_pred_;
+
+    // Update lidar cross correlation matrix
+    Tc_lidar_ += weights_(i) * x_diff * z_lidar_diff.transpose();
+  }
+
+  // Calculate lidar Kalman gain;
+  MatrixXd K_lidar = Tc_lidar_ * S_lidar_.inverse();
+
+  // Update state mean and covariance matrix
+  
+  /* Measurement residual difference
+     = incoming lidar measurement - mean predicted measurement */
+  z_lidar_diff = z_lidar - z_lidar_pred_;
+
+  // Update state mean and covariance matrix
+  x = x + K_lidar * z_lidar_diff;                    // state
+  P = P - K_lidar * S_lidar_ * K_lidar.transpose();  // covariance matrix
+
+  NIS_lidar = z_lidar_diff.transpose() * S_lidar_.inverse() * z_lidar_diff;
+
+  // Print result
+  // std::cout << "Updated state x: " << std::endl << x_ << std::endl;
+  // std::cout << "Updated state covariance P: " << std::endl << P_ << std::endl;
 }
 
 void UKF::UpdateRadar(MeasurementPackage meas_package) {
