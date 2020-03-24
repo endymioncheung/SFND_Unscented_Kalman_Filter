@@ -64,12 +64,16 @@ UKF::UKF() {
   x_ = VectorXd(n_x_);
   x_.fill(0);
 
-  // Initalize covariance matrix with Identity() matrix
-  // for faster estimation convergence rather than one
-  // for all the matrix
-  P_ = MatrixXd::Identity(n_x_,n_x_);
-  // P_ = MatrixXd(n_x_, n_x_);
-  // P_.setIdentity(n_x_,n_x_);
+  // Initalize covariance matrix with radar measurement noise standard deviations 
+  // for faster estimation convergence 
+  P_ = MatrixXd(n_x_, n_x_);
+  P_ << std_radr_*std_radr_, 0, 0, 0, 0,
+        0, std_radr_*std_radr_, 0, 0, 0,
+        0, 0, std_radrd_*std_radrd_ , 0, 0,
+        0, 0, 0, std_radphi_*std_radphi_, 0,
+        0, 0, 0, 0, std_radrd_*std_radrd_;
+  // P_.setIdentity(n_x_,n_x_);             // slow converging with identity matrix
+  // P_ = MatrixXd::Identity(n_x_,n_x_);    // converging faster than identity
   
   // Number of sigma points
   n_sig_ =  2 * n_x_ + 1;
